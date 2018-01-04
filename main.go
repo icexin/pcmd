@@ -13,6 +13,8 @@ import (
 
 var (
 	nworker = flag.Int("c", 50, "concurrent")
+
+	seq int32
 )
 
 type lineWriter struct {
@@ -37,8 +39,13 @@ func (w *lineWriter) Flush() {
 	}
 }
 
-func render(cmd string, data string) string {
-	fs := strings.Fields(data)
+type item struct {
+	data string
+	idx  int
+}
+
+func render(cmd string, x item) string {
+	fs := strings.Fields(x.data)
 	for i := 1; i < 10; i++ {
 		old := fmt.Sprintf("{{%d}}", i)
 		new := ""
@@ -47,15 +54,16 @@ func render(cmd string, data string) string {
 		}
 		cmd = strings.Replace(cmd, old, new, -1)
 	}
+	cmd = strings.Replace(cmd, "{{i}}", fmt.Sprint(x.idx), -1)
 	return cmd
 }
 
-func worker(cmd string, ch chan string, wg *sync.WaitGroup) {
+func worker(cmd string, ch chan item, wg *sync.WaitGroup) {
 	defer wg.Done()
 	stdout := new(lineWriter)
 	stderr := new(lineWriter)
-	for data := range ch {
-		cmdstr := render(cmd, data)
+	for item := range ch {
+		cmdstr := render(cmd, item)
 		c := exec.Command("bash", "-c", cmdstr)
 		c.Stdout = stdout
 		c.Stderr = stderr
@@ -73,16 +81,18 @@ func main() {
 	}
 
 	wg := new(sync.WaitGroup)
-	ch := make(chan string, *nworker)
+	ch := make(chan item, *nworker)
 	for i := 0; i < *nworker; i++ {
 		wg.Add(1)
 		go worker(flag.Arg(0), ch, wg)
 	}
 
+	idx := 0
 	r := bufio.NewScanner(os.Stdin)
 	for r.Scan() {
+		idx++
 		line := r.Text()
-		ch <- line
+		ch <- item{line, idx}
 	}
 	close(ch)
 	wg.Wait()
