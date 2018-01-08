@@ -5,7 +5,7 @@
 假设你有一个url列表文件，每行一个url，你想并发使用curl命令把列表里的地址抓下来保存到文件里面，pcmd或许能帮助你。
 
 ```
-cat url.txt | pcmd -c 100 "echo "downloading {{1}}" && curl {{1}} > {{1}}.html"
+cat url.txt | pcmd -c 100 'echo "downloading {{1}}" && curl {{1}} > {{1}}.html'
 ```
 
 上面命令将以100的并发来下载文件。
