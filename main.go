@@ -13,8 +13,6 @@ import (
 
 var (
 	nworker = flag.Int("c", 50, "concurrent")
-
-	seq int32
 )
 
 type lineWriter struct {
